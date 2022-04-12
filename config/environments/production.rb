@@ -1,5 +1,9 @@
 OpenDSA::Application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
+  config.hosts << "opendsa-staging.cs.vt.edu"
+  config.hosts << "opendsa-server.cs.vt.edu"
+  config.hosts << "opendsax.cs.vt.edu"
+  config.hosts << "opendsa.org"
 
   # Code is not reloaded between requests.
   config.cache_classes = true
@@ -23,7 +27,8 @@ OpenDSA::Application.configure do
   config.serve_static_files = false
 
   # Compress JavaScripts and CSS.
-  config.assets.js_compressor = :uglifier
+  # config.assets.js_compressor = Uglifier.new(harmony: true)
+
   # config.assets.css_compressor = :sass
 
   # Do not fallback to assets pipeline if a precompiled asset is missed.

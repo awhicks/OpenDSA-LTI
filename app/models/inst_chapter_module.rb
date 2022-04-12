@@ -1,4 +1,23 @@
-class InstChapterModule < ActiveRecord::Base
+# == Schema Information
+#
+# Table name: inst_chapter_modules
+#
+#  id                  :bigint           not null, primary key
+#  inst_chapter_id     :bigint           not null
+#  inst_module_id      :bigint           not null
+#  module_position     :bigint
+#  lms_module_item_id  :bigint
+#  lms_section_item_id :bigint
+#  created_at          :datetime
+#  updated_at          :datetime
+#  lms_assignment_id   :bigint
+#
+# Indexes
+#
+#  inst_chapter_modules_inst_chapter_id_fk  (inst_chapter_id)
+#  inst_chapter_modules_inst_module_id_fk   (inst_module_id)
+#
+class InstChapterModule < ApplicationRecord
   #~ Relationships ............................................................
   belongs_to :inst_chapter
   belongs_to :inst_module
@@ -42,7 +61,7 @@ class InstChapterModule < ActiveRecord::Base
   def get_bk_sec_exercises()
     InstBookSectionExercise.includes(:inst_exercise)
       .joins(:inst_section)
-      .where(inst_section: {inst_chapter_module_id: self.id})
+      .where(inst_sections: {inst_chapter_module_id: self.id})
   end
 
   # get all exercise progresses for the exercises in this module for the specified user
@@ -57,7 +76,7 @@ class InstChapterModule < ActiveRecord::Base
 
   def total_points
     return InstBookSectionExercise.joins(inst_section: [:inst_chapter_module])
-             .where(inst_section: {inst_chapter_module_id: self.id}).sum(:points)
+             .where(inst_sections: {inst_chapter_module_id: self.id}).sum(:points)
   end
 
   #~ Private instance methods .................................................

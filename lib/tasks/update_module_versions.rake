@@ -9,7 +9,7 @@ task :update_module_versions => :environment do
         'PL',
         'VisFormalLang',
         'CT',
-        'CTEX'
+        'IntroToSoftwareDesign'
     ]
 
     FULL_CONFIG_FILENAME = '_config.json'
@@ -20,9 +20,9 @@ task :update_module_versions => :environment do
 
     # Steps to generate stand-alone modules
     #- 1. run simple2full.py on reference configs to generate full configurations
-    #- 2. consolidate full configs into one config, filtering out modules not in 
+    #- 2. consolidate full configs into one config, filtering out modules not in
     #       the OpenDSA::STANDALONE_DIRECTORIES hash
-    #- 3. check which of the modules need to be updated based on the commit hash of 
+    #- 3. check which of the modules need to be updated based on the commit hash of
     #       the commit the module's RST file was last modified in and filter out
     #       modules that don't need updating
     # 4. compile the consolidated configuration (run configure.py with --standalone-modules switch)
@@ -62,7 +62,7 @@ task :update_module_versions => :environment do
             full_config['chapters'].each do |chapter_name, chapter_obj|
                 chapter_obj.each do |module_path, module_obj|
                     sep_index = module_path.index('/')
-                    unless sep_index.nil?   
+                    unless sep_index.nil?
                         module_folder = module_path[0..(sep_index-1)]
                         if OpenDSA::STANDALONE_DIRECTORIES.key?(module_folder) and !modules.key?(module_path)
                             modules[module_path] = module_obj
@@ -84,17 +84,17 @@ task :update_module_versions => :environment do
 
     def process_reference_config(config_file_path)
         puts "Generating full configuration file for reference configuration \"#{config_file_path}\"."
-        
-        output_file_path = File.join(OUTPUT_DIRECTORY, File.basename(config_file_path))
-        script_path = File.join(OpenDSA::OPENDSA_DIRECTORY, 'tools', 'simple2full.py')
 
-        require 'open3'
-        command = "python #{script_path} #{config_file_path} #{output_file_path} --expanded --verbose"
-        stdout, stderr, status = Open3.capture3(command)
-        unless status.success?
+        output_file_path = File.join(OUTPUT_DIRECTORY, File.basename(config_file_path))
+        input_path = config_file_path[15..-1] # without the public/OpenDSA
+        output_file = output_file_path[15..-1] # without the public/OpenDSA
+        require 'net/http'
+        uri = URI(ENV["simple_api_link"])
+        res = Net::HTTP.post_form(uri, 'input_path' => input_path, 'output_path' => output_file, 'rake' => true)
+
+         unless res.kind_of? Net::HTTPSuccess
             puts "FAILED to generate full configuration file for \"#{config_file_path}\"."
-            puts stdout
-            puts stderr
+            Rails.logger.info(res['stderr_compressed'])
         end
 
         json = File.read(output_file_path)
@@ -108,32 +108,21 @@ task :update_module_versions => :environment do
         File.open(config_file_path, "w") do |f|
             f.write(config.to_json)
         end
+        config_path = config_file_path[15..-1] # without the public/OpenDSA
+        require 'net/http'
+        uri = URI(ENV["config_api_link"])
+        res = Net::HTTP.post_form(uri, 'config_file_path' => config_path, 'build_path' => OUTPUT_DIRECTORY_REL, 'rake' => true)
 
-        require 'open3'
-        command = "python #{script_path} #{config_file_path} --standalone-modules -b #{OUTPUT_DIRECTORY_REL}"
-        stdout, stderr, status = Open3.capture3(command)
-        
-        if status.success?
+        if res.kind_of? Net::HTTPSuccess
             puts "Compilation of stand-alone modules was SUCCESSFUL."
         else
             puts "Compilation of stand-alone modules FAILED."
+            Rails.logger.info(res['stderr_compressed'])
         end
 
-        puts "Writing log files..."
-        stdout_path = File.join(OUTPUT_DIRECTORY, 'stdout.log')
-        stderr_path = File.join(OUTPUT_DIRECTORY, 'stderr.log')
-        File.open(stdout_path, "w") do |f|
-            f.write(stdout)
-        end
-        puts "stdout log written to \"#{File.expand_path(stdout_path)}\""
-        File.open(stderr_path, "w") do |f|
-            f.write(stderr)
-        end
-        puts "stderr log written to \"#{File.expand_path(stderr_path)}\""
-        
         return status.success?
     end
-    
+
     def main()
         puts "Checking for stand-alone modules that need updating."
         initialize_output_directory()

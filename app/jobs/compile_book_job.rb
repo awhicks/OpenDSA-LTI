@@ -9,20 +9,29 @@ class CompileBookJob < ProgressJob::Base
   def perform
     update_stage('Compiling OpenDSA book')
     inst_book_json = ApplicationController.new.render_to_string(
-      template: 'inst_books/show.json.jbuilder',
+      template: "inst_books/show.json.jbuilder",
       locals: {:@inst_book => @inst_book, :@extrtool_launch_base_url => @extrtool_launch_base_url},
     )
 
     require 'json'
     config_file = sanitize_filename('temp_' + @user_id.to_s + '_' + Time.now.getlocal.to_s) + '.json'
     config_file_path = "public/OpenDSA/config/temp/#{config_file}"
+    Rails.logger.info('config_file_path')
+    Rails.logger.info(config_file_path)
     File.open(config_file_path, "w") do |f|
       f.write(inst_book_json)
     end
 
-    script_path = "public/OpenDSA/tools/configure.py"
     build_path = book_path(@inst_book)
-    value = %x(python #{script_path} #{config_file_path} -b #{build_path})
+    Rails.logger.info('build_path')
+    Rails.logger.info(build_path)
+    config_path = config_file_path[15..-1] # without the public/OpenDSA
+    require 'net/http'
+    uri = URI(ENV["config_api_link"])
+    res = Net::HTTP.post_form(uri, 'config_file_path' => config_path, 'build_path' => build_path, 'rake' => false)
+    unless res.kind_of? Net::HTTPSuccess
+      Rails.logger.info(res['stderr_compressed'])
+    end
     update_progress
   end
 

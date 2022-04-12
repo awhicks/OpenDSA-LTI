@@ -1,7 +1,42 @@
-# =============================================================================
-# Represents a single user account on the system.
+# == Schema Information
 #
-class User < ActiveRecord::Base
+# Table name: users
+#
+#  id                     :bigint           not null, primary key
+#  email                  :string(255)      default(""), not null
+#  encrypted_password     :string(255)      default(""), not null
+#  reset_password_token   :string(255)
+#  reset_password_sent_at :datetime
+#  remember_created_at    :datetime
+#  sign_in_count          :bigint           default(0), not null
+#  current_sign_in_at     :datetime
+#  last_sign_in_at        :datetime
+#  current_sign_in_ip     :string(255)
+#  last_sign_in_ip        :string(255)
+#  confirmation_token     :string(255)
+#  confirmed_at           :datetime
+#  confirmation_sent_at   :datetime
+#  created_at             :datetime
+#  updated_at             :datetime
+#  first_name             :string(255)
+#  last_name              :string(255)
+#  global_role_id         :bigint           not null
+#  avatar                 :string(255)
+#  slug                   :string(255)      not null
+#  time_zone_id           :bigint
+#
+# Indexes
+#
+#  index_users_on_confirmation_token    (confirmation_token) UNIQUE
+#  index_users_on_email                 (email) UNIQUE
+#  index_users_on_global_role_id        (global_role_id)
+#  index_users_on_reset_password_token  (reset_password_token) UNIQUE
+#  index_users_on_slug                  (slug) UNIQUE
+#  index_users_on_time_zone_id          (time_zone_id)
+#
+class User < ApplicationRecord
+  # Represents a single user account on the system.
+
   include Gravtastic
   gravtastic secure: true, default: 'monsterid'
 
@@ -19,7 +54,6 @@ class User < ActiveRecord::Base
   has_many  :inst_books, inverse_of: :user
   has_many  :courses, inverse_of: :user
   has_many  :odsa_exercise_attempts, inverse_of: :user
-  has_many  :pi_attempts, inverse_of: :user
   has_many  :odsa_exercise_progresses, inverse_of: :user
   has_many  :odsa_module_progresses, inverse_of: :user
   has_many  :odsa_book_progresses, inverse_of: :user
@@ -67,7 +101,8 @@ class User < ActiveRecord::Base
   }
 
   scope :alphabetical, -> { order('last_name asc, first_name asc, email asc') }
-  scope :visible_to_user, -> (u) { joins{course_enrollments.outer}.
+
+  scope :visible_to_user, -> (u) { left_outer_joins(:course_enrollments)
     where{ (id == u.id) &
     (course_enrollments.course_role_id != CourseRole::STUDENT_ID) } }
 
@@ -174,7 +209,9 @@ class User < ActiveRecord::Base
   end
 
   def user_display_name
-    first_name + ' ' + last_name + ' - ' + email
+    last_name.blank? ?
+        (first_name.blank? ? email : first_name) :
+        (first_name.blank? ? last_name : (first_name + ' ' + last_name + ' - ' + email))
   end
 
 

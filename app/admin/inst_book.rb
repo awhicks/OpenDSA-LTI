@@ -1,3 +1,24 @@
+# == Schema Information
+#
+# Table name: inst_books
+#
+#  id                 :bigint           not null, primary key
+#  course_offering_id :bigint
+#  user_id            :bigint           not null
+#  title              :string(50)       not null
+#  created_at         :datetime
+#  updated_at         :datetime
+#  template           :boolean          default(FALSE)
+#  desc               :string(255)
+#  last_compiled      :datetime
+#  options            :text(4294967295)
+#  book_type          :bigint
+#
+# Indexes
+#
+#  inst_books_course_offering_id_fk  (course_offering_id)
+#  inst_books_user_id_fk             (user_id)
+#
 ActiveAdmin.register InstBook, sort_order: :created_at_asc do
   filter :template
   includes :course_offering, :user
@@ -9,6 +30,9 @@ ActiveAdmin.register InstBook, sort_order: :created_at_asc do
 
   member_action :update_configuration, method: :get do
   end
+  member_action :resend_scores, method: :get do
+  end
+
 
   member_action :clone_book, method: :get do
     inst_book = InstBook.find(params[:id])
@@ -30,15 +54,15 @@ ActiveAdmin.register InstBook, sort_order: :created_at_asc do
   collection_action :upload_create, method: :post do
   end
 
-  action_item only: :index do |inst_book|
+  action_item :index, only: :index do |inst_book|
     link_to 'Upload Books', upload_books_admin_inst_books_path(inst_book)
   end
 
-  action_item only: :show  do
-    link_to "Clone", clone_admin_inst_book_path(inst_book)
+  action_item :show, only: :show  do
+    link_to "Clone", clone_book_admin_inst_book_path(inst_book)
   end
 
-  action_item only: [:show, :edit]  do
+  action_item :view, only: [:show, :edit]  do
     message = confirmation_message(inst_book)
     link_to "Delete", { action: :destroy }, method: :delete, data: { confirm: message}
   end
@@ -57,6 +81,18 @@ ActiveAdmin.register InstBook, sort_order: :created_at_asc do
       render 'upload_books'
     end
 
+    def resend_scores
+      if authorized? :update_configuration
+        @job = Delayed::Job.enqueue ResendScoresJob.new(
+          current_user.id, params[:id])
+        flash[:success] = "Started job to resend all score passbacks for " +
+          "all users in all modules for the selected book instance."
+      else
+        flash[:error] = "not authorized"
+      end
+      redirect_to admin_inst_books_path
+    end
+
     def upload_books
       if !current_user.global_role.is_admin? and !current_user.global_role.is_instructor?
         redirect_to admin_inst_books_path
@@ -64,12 +100,22 @@ ActiveAdmin.register InstBook, sort_order: :created_at_asc do
     end
 
     def upload_create
-      script_path = "public/OpenDSA/tools/simple2full.py"
-      input_file = params[:form][:file].path
+      uploaded_file = params[:form][:file]
+      File.open(Rails.root.join('public', 'OpenDSA', 'config', 'temp', uploaded_file.original_filename), 'wb') do |file|
+        file.write(uploaded_file.read)
+      end
+      input_file = "public/OpenDSA/config/temp/#{uploaded_file.original_filename}"
       output_file = sanitize_filename('temp_' + current_user.id.to_s + '_' + Time.now.getlocal.to_s) + '_full.json'
       output_file_path = "public/OpenDSA/config/temp/#{output_file}"
-      stdout = %x(python #{script_path} #{input_file} #{output_file_path})
+      output_path = output_file_path[15..-1] # without the public/OpenDSA
+      input_path = input_file[15..-1] # without the public/OpenDSA
+      require 'net/http'
+      uri = URI(ENV["simple_api_link"])
+      res = Net::HTTP.post_form(uri, 'input_path' => input_path, 'output_path' => output_path, 'rake' => false)
 
+      unless res.kind_of? Net::HTTPSuccess
+        Rails.logger.info(res['stderr_compressed'])
+      end
       hash = JSON.load(File.read(output_file_path))
       if params.has_key?(:inst_book)
         InstBook.save_data_from_json(hash, current_user, params[:inst_book]["id"])
@@ -121,8 +167,10 @@ ActiveAdmin.register InstBook, sort_order: :created_at_asc do
       end
       links += link_to "Clone", clone_book_admin_inst_book_path(inst_book)
       if authorized? :update_configuration, inst_book
+        links += ' '
         links += link_to "Update Configuration", update_configuration_admin_inst_book_path(inst_book)
         links += ' '
+        links += link_to "Re-send Scores", resend_scores_admin_inst_book_path(inst_book)
       end
       links
     end

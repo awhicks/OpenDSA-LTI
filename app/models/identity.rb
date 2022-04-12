@@ -2,10 +2,10 @@
 #
 # Table name: identities
 #
-#  id         :integer          not null, primary key
-#  user_id    :integer          not null
-#  provider   :string(255)      default(""), not null
-#  uid        :string(255)      default(""), not null
+#  id         :bigint           not null, primary key
+#  user_id    :bigint           not null
+#  provider   :string(255)      not null
+#  uid        :string(255)      not null
 #  created_at :datetime
 #  updated_at :datetime
 #
@@ -20,7 +20,7 @@
 # authentication provider.  A single user object may be associated with
 # multiple identities, each from a separate provider.
 #
-class Identity < ActiveRecord::Base
+class Identity < ApplicationRecord
 
   #~ Relationships ............................................................
 

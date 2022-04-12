@@ -2,10 +2,10 @@
 #
 # Table name: course_enrollments
 #
-#  id                 :integer          not null, primary key
-#  user_id            :integer          not null
-#  course_offering_id :integer          not null
-#  course_role_id     :integer          not null
+#  id                 :bigint           not null, primary key
+#  user_id            :bigint           not null
+#  course_offering_id :bigint           not null
+#  course_role_id     :bigint           not null
 #
 # Indexes
 #
@@ -19,8 +19,8 @@
 
 FactoryBot.define do
   factory :course_enrollment do
-    course_offering_id 1
+    course_offering_id { 1 }
     course_role        { CourseRole.student }
-    user_id 1
+    user_id { 1 }
   end
 end

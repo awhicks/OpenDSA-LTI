@@ -26,5 +26,7 @@ every :reboot do
 end
 
 every 1.day, :at => '5:00 am' do
- command "cd /home/deploy/OpenDSA-LTI/current && RAILS_ENV=production bin/delayed_job  -n 2 restart"
+  command "cd /home/deploy/OpenDSA-LTI/current && RAILS_ENV=production bin/delayed_job -n 2 restart"
+  command "ps aux | grep puma | awk '{print $2}' | xargs kill -9"
+  command "cd /home/deploy/OpenPOP && ./runprod.sh"
 end

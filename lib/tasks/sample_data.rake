@@ -2,7 +2,7 @@ require 'factory_bot'
 
 namespace :db do
   desc "Reset database and then fill it with sample data"
-  task populate: [:environment] do
+  task populate: [:environment, :reset] do
     FactoryBot.create(:learning_tool)
     FactoryBot.create(:organization)
     FactoryBot.create(:term100)
@@ -11,6 +11,7 @@ namespace :db do
     FactoryBot.create(:term400)
     FactoryBot.create(:term500)
     FactoryBot.create(:course)
+    FactoryBot.create(:late_policy)
     FactoryBot.create(:lms_instance)
     offerings = []
     offerings[0] = FactoryBot.create(:course_offering_term_1_tr)

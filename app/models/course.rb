@@ -2,19 +2,20 @@
 #
 # Table name: courses
 #
-#  id              :integer          not null, primary key
-#  name            :string(255)      default(""), not null
-#  number          :string(255)      default(""), not null
-#  organization_id :integer          not null
+#  id              :bigint           not null, primary key
+#  name            :string(255)      not null
+#  number          :string(255)      not null
+#  organization_id :bigint           not null
+#  user_id         :bigint           not null
 #  created_at      :datetime
 #  updated_at      :datetime
-#  creator_id      :integer
-#  slug            :string(255)      default(""), not null
+#  slug            :string(255)      not null
 #
 # Indexes
 #
 #  index_courses_on_organization_id  (organization_id)
 #  index_courses_on_slug             (slug)
+#  index_courses_on_user_id          (user_id)
 #
 
 # =============================================================================
@@ -22,7 +23,7 @@
 # description.  A course may have one or more course offerings in any
 # specific term.
 #
-class Course < ActiveRecord::Base
+class Course < ApplicationRecord
   extend FriendlyId
   friendly_id :number_without_spaces, use: [:history, :scoped],
     scope: :organization

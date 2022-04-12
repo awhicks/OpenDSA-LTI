@@ -1,3 +1,46 @@
+## Development Environment
+
+The development environment assumes you have Docker, Docker-Compose, Git, and Make installed.  The environment does not require Make, but it is helpful for running the application.
+
+Docker can be found [here](https://docs.docker.com/get-docker/) and instructions for installing Docker-Compose (if not included with your Docker installation) can be found [here](https://docs.docker.com/compose/install/). If you are on Windows, see [below](#windows) for further instructions.
+
+Make can be found in the default package manager on Linux, in Brew on Mac, and [here](http://gnuwin32.sourceforge.net/packages/make.htm) for Windows. For a Windows installation, you should put make in Program Files, NOT Program Files (x86). Then, edit your environment variable PATH to add: C:/Program Files/GnuWin32/bin. If you don’t know how to edit an environment variable on Windows, google for “windows set environment variable”.
+
+To run OpenDSA-LTI, simply run either `make up` or `docker-compose up` and once you see 
+
+`RAILS_ENV=development bundle exec thin start --ssl --ssl-key-file server.key --ssl-cert-file server.crt -p 80`
+
+in the terminal, this may take a few minutes, especially the first time, the app will be available at
+
+https://localhost:8000
+
+If you are on Windows, see the section below, you may have to run the dos2unix converter if you are only seeing logs from the db container and not opendsa-lti
+
+Note: we are using self-signed certificates for development and you will have to tell your browser to accept our certificate.
+
+When you are done, you can kill the app with `Ctrl+C` and then run `make down` or `docker-compose down` to clean up the docker environment. There are more commands in the Makefile and running `make help` or opening the Makefile in a text editor will explain what they do.
+
+Further, here are several important command from the Makefile that allow a user to interact with the application.
+
+The `make ssh` command will ssh you into the docker container and allow you to run commands for the rails app or compile a book within OpenDSA.
+
+The `make ssh-db` command will ssh you into the mysql database running in docker to run any queries or preform any database actions. In addition, the mysql database is exposed at http://localhost:3307 if you want to connect to it using an external tool
+
+## Windows
+This guide assumes you are using Docker Desktop for Windows using the WSL2 integration, however it should work using Docker Toolbox as well.
+
+If your version of Windows is Pro, Enterprise, or Education, you can use [this](https://docs.docker.com/docker-for-windows/install/) link.
+
+If your version of Windows is Home, you can use [this](https://docs.docker.com/docker-for-windows/install-windows-home/) link.
+
+Once you have installed Docker, you should next install Git. On Windows, a good choice is “Git for Windows” at https://git-scm.com/download/win. Use the third option for the path environment: “Use Git and optional Unix tools from the Windows Command Prompt”. Choose “checkout as-is, commit Unix-style line endings”, and then use “MinTTY”.
+
+If you are using Powershell or Git Bash will have to run a dos2unix converter (included in Git Bash as dos2unix.exe) on scripts/start.sh and docker-entrypoint.sh prior to running `docker-compose up`
+
+# OLD INSTRUCTIONS
+
+## Deployment Instructions
+
 Here we describe how to install [OpenDSA-LTI](https://github.com/OpenDSA/OpenDSA-LTI) on a single Ubuntu Server 14.04.3 LTS 64-bit from scratch.
 
 ## Hardware requirements
@@ -75,7 +118,7 @@ The following server requirements will be fine for supporting hundreds of users.
   - The first step is to install some dependencies for Ruby.
   ```
   $ sudo apt-get update
-  $ sudo apt-get install -y git-core curl zlib1g-dev build-essential libssl-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev libcurl4-openssl-dev python-software-properties libffi-dev dkms libxslt-dev libpq-dev python-dev python-pip python-feedvalidator python-sphinx libmariadbclient-dev libevent-dev libsqlite3-dev
+  $ sudo apt-get install -y git-core curl zlib1g-dev build-essential libssl-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev libcurl4-openssl-dev python3-software-properties libffi-dev dkms libxslt-dev libpq-dev python-dev python-pip python-feedvalidator python-sphinx libmariadbclient-dev libevent-dev libsqlite3-dev python3-pip python3-venv locales-all
   ```
   - Next we're going to be installing Ruby using rbenv.
   ```
@@ -87,10 +130,10 @@ The following server requirements will be fine for supporting hundreds of users.
 
   $ git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
   $ echo 'export PATH="$HOME/.rbenv/plugins/ruby-build/bin:$PATH"' >> ~/.bashrc
-  exec $SHELL
+  $ exec $SHELL
 
-  $ rbenv install 2.3.1
-  $ rbenv global 2.3.1
+  $ rbenv install 2.7.1
+  $ rbenv global 2.7.1
   $ ruby -v
   ```
 
@@ -111,13 +154,13 @@ The following server requirements will be fine for supporting hundreds of users.
 
   - Add Passenger APT repository
   ```
-  $ sudo sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger trusty main > /etc/apt/sources.list.d/passenger.list'
+  $ sudo sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger bionic main > /etc/apt/sources.list.d/passenger.list'
   $ sudo apt-get update
   ```
 
   - Install Passenger & Nginx
   ```
-  $ sudo apt-get install -y nginx-extras passenger
+  $ sudo apt-get install -y nginx-extras passenger libnginx-mod-http-passenger
   ```
 
   - So now we have Nginx and passenger installed. We can manage the Nginx webserver by using the service command:
@@ -132,7 +175,7 @@ The following server requirements will be fine for supporting hundreds of users.
   ```
   - First, change user from `www-data` to `deploy`
   ```
-  user `deploy`;
+  user deploy;
   worker_processes auto;
   pid /run/nginx.pid;
 
@@ -144,15 +187,10 @@ The following server requirements will be fine for supporting hundreds of users.
   ```
   - Second, point Passenger to the version of Ruby that we're using. Find the following lines in the configuration file
   ```
-  ##
-  # Phusion Passenger
-  ##
-  # Uncomment it if you installed ruby-passenger or ruby-passenger-enterprise
-  ##
+  sudo nano /etc/nginx/conf.d/mod-http-passenger.conf
   ```
-  - Then put the following two lines right after them
+  - Then replace the passenger_ruby line with the one below
   ```
-  passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;
   passenger_ruby /home/deploy/.rbenv/shims/ruby;
   ```
   - The `passenger_ruby` is the important line here. Once you've changed `passenger_ruby` to use the right version Ruby, you can restart Nginx with the new Passenger configuration.
@@ -179,7 +217,7 @@ The following server requirements will be fine for supporting hundreds of users.
 
   - Now we will create a new database and user `opendsa` for OpenDSA-LTI application. First login to mysql
   ```
-  $ mysql -uroot -p
+  $ sudo mysql -uroot -p
   ```
   - Then create `opendsa` database
   ```
@@ -190,16 +228,26 @@ The following server requirements will be fine for supporting hundreds of users.
   exit
   ```
 
+  - We also need to update the mysql configuration file. Open /etc/mysql/conf.d/mysql.cnf in your text editorand replace the file's contents with the below configuration
+  ```
+[mysqld]
+innodb_temp_data_file_path = ibtmp1:12M:autoextend:max:500M
+  ```
+
 ### Install Node.js and bower
 
   - Node.js is required by Rails assets pipeline.
 
   ```
+  cd ~
   $ sudo apt-get install -y nodejs
+  $ curl -sL https://deb.nodesource.com/setup_10.x -o nodesource_setup.sh
+  $ sudo bash nodesource_setup.sh
   $ sudo ln -s /usr/bin/nodejs /usr/sbin/node
   $ sudo npm install -g jshint
   $ sudo npm install -g csslint
   $ sudo npm install -g bower
+  $ sudo npm install -g uglify-js
   ```
 
 ### Clone OpenDSA repository in your production server
@@ -211,6 +259,23 @@ The following server requirements will be fine for supporting hundreds of users.
   $ git clone https://github.com/OpenDSA/OpenDSA.git
   $ cd OpenDSA
   $ make pull
+  ```
+
+  - We also want to set up the python environment for OpenDSA for use by the OpenDSA-LTI application. To do this, we will first set up the environment by running the following commands.
+
+  ```
+  $ cd /home/deploy/OpenDSA
+  $ export PYTHON="python3"
+  $ make venv
+  $ source /home/deploy/OpenDSA/.pyVenv/bin/activate
+  ```
+
+  - Then we want to update our `~/.bashrc` file so we use the virtual environment every time we login. To do this, we will run the following commands.
+
+  ```
+  $ echo 'export PYTHON="python3"' >> ~/.bashrc
+  $ echo 'source /home/deploy/OpenDSA/.pyVenv/bin/activate' >> ~/.bashrc
+  $ exec $SHELL
   ```
 
   - For the next steps, **Switch back to OpenDSA-DevStack terminal**
@@ -361,7 +426,8 @@ The following server requirements will be fine for supporting hundreds of users.
           server_name prod_server_name;
           ssl_certificate /etc/nginx/ssl/nginx.crt;
           ssl_certificate_key /etc/nginx/ssl/nginx.key;
-
+          
+          charset UTF-8;
           passenger_enabled on;
           rails_env    production;
           root         /home/deploy/OpenDSA-LTI/current/public;

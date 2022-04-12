@@ -12,6 +12,7 @@ OpenDSA::Application.routes.draw do
   post 'lti/outcomes', to: 'lti#grade_passback', as: :lti_grade_passback
 
   resources :odsa_user_interactions
+  resources :odsa_user_time_tracking
   resources :odsa_exercise_attempts
   # resources :odsa_exercise_progresses
   get '/odsa_exercise_progresses/:inst_book_id/:inst_section_id/:exercise_name' => 'odsa_exercise_progresses#show_exercise'
@@ -23,12 +24,21 @@ OpenDSA::Application.routes.draw do
   post '/odsa_exercise_progresses' => 'odsa_exercise_progresses#update'
   post '/odsa_exercise_attempts/pe' => 'odsa_exercise_attempts#create_pe'
   post '/odsa_exercise_attempts/ae' => 'odsa_exercise_attempts#create_ae'
+  post '/odsa_exercise_attempts/pi' => 'odsa_exercise_attempts#create_pi'
+  post '/odsa_exercise_attempts/get_attempts' => 'odsa_exercise_attempts#get_attempts'
+  post '/odsa_exercise_attempts/get_checkpoint' => 'odsa_exercise_attempts#get_checkpoint'
+  post '/odsa_exercise_attempts/get_progress' => 'odsa_exercise_attempts#get_progress'
   # get '/odsa_exercise_attempts/get_count' => 'odsa_exercise_attempts#get_count'
 
-  post '/pi_attempts' => 'pi_attempts#create'
-  post '/pi_attempts/get_attempts' => 'pi_attempts#get_attempts'
-  post '/pi_attempts/get_checkpoint' => 'pi_attempts#get_checkpoint'
-  post '/pi_attempts/get_progress' => 'pi_attempts#get_progress'
+  # post '/pi_attempts' => 'pi_attempts#create'
+  # post '/pi_attempts/get_attempts' => 'pi_attempts#get_attempts'
+  # post '/pi_attempts/get_checkpoint' => 'pi_attempts#get_checkpoint'
+  # post '/pi_attempts/get_progress' => 'pi_attempts#get_progress'
+
+  #used to store student progress
+  #used by grading.js in the front end
+  post '/student_exercise_progress/new_progress' => 'student_exercise_progresses#create'
+  post '/student_exercise_progress/get_progress' => 'student_exercise_progresses#fetch'
   
   #me
   #get '/Display' => 'course_offerings#postData'
@@ -88,6 +98,8 @@ OpenDSA::Application.routes.draw do
   get '/course_offerings/new' => 'course_offerings#new', as: :new_course_offerings
   post '/course_offerings' => 'course_offerings#create', as: :create_course_offerings
   get '/course_offerings/:id' => 'course_offerings#show', as: :show_course_offerings
+  get '/course_offerings/time_tracking_lookup/:id' => 'course_offerings#get_time_tracking_lookup', as: :get_time_tracking_lookup
+  get '/course_offerings/time_tracking_data/:id/date/:date' => 'course_offerings#get_time_tracking_data', as: :get_time_tracking_data
   get '/course_offerings/:user_id/:inst_section_id' => 'course_offerings#find_attempts', as: :find_attempts
   get '/course_offerings/:id/modules/:inst_chapter_module_id/progresses' => 'course_offerings#find_module_progresses', as: :find_module_progresses
   get '/course_offerings/:user_id/:id/exercise_list' => 'course_offerings#get_individual_attempt', as: :get_individual_attempt
@@ -156,7 +168,14 @@ OpenDSA::Application.routes.draw do
   resources :course_offerings, only: [:edit, :update] do
     # post 'enroll' => :enroll, as: :enroll
     # delete 'unenroll' => :unenroll, as: :unenroll
-    match 'upload_roster/:action', controller: 'upload_roster', as: :upload_roster, via: [:get, :post]
+    #
+    get 'upload_roster' => 'upload_roster#index', as: :upload_roster_index
+    post 'upload_roster' => 'upload_roster#upload', as: :upload_roster_upload
+
+
+    # post 'upload_roster' => :upload_roster, as: :organization_create
+    # match 'upload_roster/:action', controller: 'upload_roster', as: :upload_roster, via: [:get, :post]
+
     post 'generate_gradebook' => :generate_gradebook, as: :gradebook
     get 'add_workout' => :add_workout, as: :add_workout
     post 'store_workout/:id' => :store_workout, as: :store_workout

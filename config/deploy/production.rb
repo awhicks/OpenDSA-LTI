@@ -18,6 +18,8 @@ role :db,  %w{deploy@192.168.86.224}
 # used to set extended properties on the server.
 server '192.168.86.224', user: 'deploy', roles: %w{web app db}, my_property: :my_value
 
+set :default_env, { opendsa_branch: "master",
+                    python_venv_path: "/home/deploy/OpenDSA/.pyVenv/bin/activate" }
 
 # Custom SSH Options
 # ==================

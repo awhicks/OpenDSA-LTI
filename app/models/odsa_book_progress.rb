@@ -1,4 +1,21 @@
-class OdsaBookProgress < ActiveRecord::Base
+# == Schema Information
+#
+# Table name: odsa_book_progresses
+#
+#  id                   :bigint           not null, primary key
+#  user_id              :bigint           not null
+#  inst_book_id         :bigint           not null
+#  started_exercises    :text(4294967295) not null
+#  proficient_exercises :text(4294967295) not null
+#  created_at           :datetime
+#  updated_at           :datetime
+#
+# Indexes
+#
+#  index_odsa_book_progresses_on_user_id_and_inst_book_id  (user_id,inst_book_id) UNIQUE
+#  odsa_book_progresses_inst_book_id_fk                    (inst_book_id)
+#
+class OdsaBookProgress < ApplicationRecord
   #~ Relationships ............................................................
   belongs_to :user
   belongs_to :inst_book
@@ -52,7 +69,7 @@ class OdsaBookProgress < ActiveRecord::Base
 
   # Return array of exercises names
   def get_proficient_exercises
-    return self.proficient_exercises.split(',')
+    return self.proficient_exercises.nil? ? [] : self.proficient_exercises.to_s.split(',')
   end
 
   def self.get_progress(user_id, inst_book_id)

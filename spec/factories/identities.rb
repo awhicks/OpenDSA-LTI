@@ -2,10 +2,10 @@
 #
 # Table name: identities
 #
-#  id         :integer          not null, primary key
-#  user_id    :integer          not null
-#  provider   :string(255)      default(""), not null
-#  uid        :string(255)      default(""), not null
+#  id         :bigint           not null, primary key
+#  user_id    :bigint           not null
+#  provider   :string(255)      not null
+#  uid        :string(255)      not null
 #  created_at :datetime
 #  updated_at :datetime
 #
@@ -19,8 +19,8 @@
 
 FactoryBot.define do
   factory :identity do
-    user nil
-    provider "MyString"
-    uid "MyString"
+    user { nil }
+    provider { "MyString" }
+    uid { "MyString" }
   end
 end
